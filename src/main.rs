@@ -5,6 +5,10 @@ const BG_COLOR: Color = Color::rgb(0.1, 0.1, 0.1);
 const FONT_SIZE: f32 = 24.0;
 const START_TEXT: &str = "Press Space to start and jump. Press Q to quit.";
 const SCORE_TEXT: &str = "Score: ";
+const MAX_SPEED: f32 = 5.0;
+const MIN_SPEED: f32 = -5.0;
+const JUMP_SPEED_INC: f32 = 2.5;
+const SPEED_DEC: f32 = -0.3;
 
 fn main() {
     App::new()
@@ -13,6 +17,8 @@ fn main() {
         .insert_resource(GameState {
             score: 0,
             alive: false,
+            velocity_x: 0.0,
+            velocity_y: 0.0,
         })
         .add_systems(Startup, setup)
         .add_systems(Update, update)
@@ -70,8 +76,20 @@ fn update(
 ) {
     match game_state.alive {
         true => {
-            game_state.score += 1;
-            score_query.single_mut().sections[1].value = game_state.score.to_string();
+            kb_events.read().for_each(|event| match event.key_code {
+                KeyCode::Space => match game_state.velocity_y {
+                    _ if game_state.velocity_y < MAX_SPEED => {
+                        game_state.velocity_y += JUMP_SPEED_INC
+                    }
+                    _ => (),
+                },
+                KeyCode::KeyQ => process::exit(0x0),
+                _ => (),
+            });
+            match game_state.velocity_y {
+                _ if game_state.velocity_y > MIN_SPEED => game_state.velocity_y += SPEED_DEC,
+                _ => (),
+            }
         }
         false => {
             kb_events.read().for_each(|event| match event.key_code {
@@ -79,6 +97,8 @@ fn update(
                     text_query.single_mut().sections[0].value = "".to_string();
                     score_query.single_mut().sections[0].value = SCORE_TEXT.to_owned();
                     game_state.alive = true;
+                    game_state.velocity_x = 5.0;
+                    score_query.single_mut().sections[1].value = game_state.score.to_string();
                 }
                 KeyCode::KeyQ => process::exit(0x0),
                 _ => (),
@@ -91,6 +111,8 @@ fn update(
 struct GameState {
     score: usize,
     alive: bool,
+    velocity_y: f32,
+    velocity_x: f32,
 }
 
 #[derive(Component)]
