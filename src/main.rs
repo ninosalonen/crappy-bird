@@ -14,7 +14,13 @@ const BG_COLOR: Color = Color::rgb(0.1, 0.1, 0.1);
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                title: "Crappy bird".to_string(),
+                ..Default::default()
+            }),
+            ..Default::default()
+        }))
         .insert_resource(ClearColor(BG_COLOR))
         .insert_resource(GameState {
             score: 0,
