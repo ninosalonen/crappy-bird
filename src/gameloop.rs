@@ -21,7 +21,8 @@ const BIRD_SIZE: f32 = 25.0;
 const PIPE_WIDTH: f32 = 50.0;
 const GAP: f32 = 100.0;
 const HALF_GAP: f32 = GAP / 2.0;
-const DEATH_TEXT: &str = "You died (noob). Press Enter to restart or Esc to quit.";
+const DEATH_TEXT: &str =
+    "You died (noob). Press Enter to restart the game (literally) or Esc to quit.";
 
 pub fn update(
     mut commands: Commands,
@@ -70,7 +71,7 @@ pub fn update(
                 }
 
                 // Move pipes to the left
-                transform.translation.x -= time.delta_seconds() * 200.0;
+                transform.translation.x -= time.delta_seconds() * 500.0;
 
                 // Remove pipes from left of screen
                 let left_threshold = -(window_width / 2.0 + PIPE_WIDTH / 2.0);
