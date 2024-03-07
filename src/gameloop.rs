@@ -79,7 +79,7 @@ pub fn update(
                 }
 
                 // Increment score after passing pipes
-                if !pipe_passed.0 && transform.translation.x < -BIRD_SIZE / 2.0 {
+                if !pipe_passed.0 && transform.translation.x < -BIRD_SIZE {
                     pipe_passed.0 = true;
                     game_state.score += 1;
                     score_query.single_mut().sections[1].value = game_state.score.to_string();
