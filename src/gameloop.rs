@@ -5,6 +5,7 @@ use std::{
 
 use bevy::{
     input::keyboard::KeyboardInput,
+    math::bounding::{Aabb2d, BoundingCircle, IntersectsVolume},
     prelude::*,
     sprite::{MaterialMesh2dBundle, Mesh2dHandle},
 };
@@ -18,7 +19,7 @@ const MAX_SPEED: f32 = 5.0;
 const SPEED_DEC: f32 = -0.2;
 const BIRD_SIZE: f32 = 25.0;
 const PIPE_WIDTH: f32 = 50.0;
-const DIFFICULTY: f32 = 100.0;
+const DIFFICULTY: f32 = 150.0;
 const DEATH_TEXT: &str = "You died (noob). Press Enter to restart or Esc to quit.";
 
 pub fn update(
@@ -39,21 +40,38 @@ pub fn update(
         true => {
             let window_height = window.single().height();
             let window_width = window.single().width();
+            let (_, mut bird) = bird_query.single_mut();
 
-            // Check for collision
-            for (_, bird_transform) in bird_query.iter_mut() {
-                for (_, pipe_transform, _) in pipe_query.iter_mut() {
-                    if check_collision(bird_transform.translation, pipe_transform.translation) {
-                        game_state.alive = false;
-                        game_state.game_over = true;
-                    }
-                }
+            // Update bird location
+            let ground = -(window_height / 2.0);
+            let roof = window_height / 2.0;
+            let move_amount = game_state.speed_y * time.delta_seconds() * 100.0;
+
+            match bird.translation.y {
+                h if h + move_amount + BIRD_SIZE > roof => (),
+                h if h + move_amount - BIRD_SIZE < ground => (),
+                _ => bird.translation.y += move_amount,
             }
 
-            // Remove pipes
-            for (_, transform, entity) in pipe_query.iter_mut() {
-                let left_threshold = -(window_width / 2.0 + PIPE_WIDTH / 2.0);
+            // Iterate over the pipes
+            for (_, mut transform, entity) in pipe_query.iter_mut() {
+                // Check for collision
+                if check_collision(
+                    BoundingCircle::new(bird.translation.truncate(), BIRD_SIZE / 2.0),
+                    Aabb2d::new(
+                        transform.translation.truncate(),
+                        transform.scale.truncate() / 2.0,
+                    ),
+                ) {
+                    game_state.alive = false;
+                    game_state.game_over = true;
+                }
 
+                // Move pipes to the left
+                transform.translation.x -= time.delta_seconds() * 200.0;
+
+                // Remove pipes from left of screen
+                let left_threshold = -(window_width / 2.0 + PIPE_WIDTH / 2.0);
                 if transform.translation.x < left_threshold {
                     commands.entity(entity).remove::<Pipe>();
                 }
@@ -65,7 +83,7 @@ pub fn update(
                 let pipe_x_offset = window_width / 2.0 + PIPE_WIDTH / 2.0;
 
                 let mut rng = rand::thread_rng();
-                let max_offset = window_height / 2.0 - DIFFICULTY;
+                let max_offset = window_height / 2.0 + DIFFICULTY;
                 let gap_offset = rng.gen_range(-max_offset..max_offset) as f32;
 
                 let top_pipe_height = window_height / 2.0 + gap_offset + DIFFICULTY;
@@ -94,28 +112,6 @@ pub fn update(
                     },
                     Pipe,
                 ));
-            }
-
-            // Update bird location
-            for (_, mut transform) in bird_query.iter_mut() {
-                let ground = -(window_height / 2.0);
-                let roof = window_height / 2.0;
-                let move_amount = game_state.speed_y * time.delta_seconds() * 100.0;
-
-                match transform.translation.y {
-                    h if h + move_amount + BIRD_SIZE > roof => (),
-                    h if h + move_amount - BIRD_SIZE < ground => (),
-                    _ => transform.translation.y += move_amount,
-                }
-            }
-
-            // Move pipes
-            for (_, mut transform, _) in pipe_query.iter_mut() {
-                transform.translation.x -= time.delta_seconds() * 200.0;
-
-                if transform.translation.x + PIPE_WIDTH < -(window_width / 2.0) {
-                    transform.translation.x = window_width / 2.0;
-                }
             }
 
             kb_events.read().for_each(|event| match event.key_code {
@@ -169,16 +165,6 @@ pub fn update(
     }
 }
 
-fn check_collision(bird_pos: Vec3, pipe_pos: Vec3) -> bool {
-    let bird_size = Vec3::splat(BIRD_SIZE);
-    let pipe_size = Vec3::new(PIPE_WIDTH, 300.0, 0.0);
-    let min_bird = bird_pos - bird_size / 2.0;
-    let max_bird = bird_pos + bird_size / 2.0;
-    let min_pipe = pipe_pos - pipe_size / 2.0;
-    let max_pipe = pipe_pos + pipe_size / 2.0;
-
-    let x_overlap = min_bird.x < max_pipe.x && max_bird.x > min_pipe.x;
-    let y_overlap = min_bird.y < max_pipe.y && max_bird.y > min_pipe.y;
-
-    x_overlap && y_overlap
+fn check_collision(bird: BoundingCircle, pipe: Aabb2d) -> bool {
+    pipe.intersects(&bird)
 }
