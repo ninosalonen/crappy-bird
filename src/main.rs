@@ -31,7 +31,7 @@ fn main() {
             game_over: false,
         })
         .insert_resource(SpawnPipeTimer {
-            t: Timer::new(Duration::from_secs(3), TimerMode::Repeating),
+            t: Timer::new(Duration::from_secs(2), TimerMode::Repeating),
         })
         .add_systems(Startup, setup)
         .add_systems(Update, update)

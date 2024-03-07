@@ -9,14 +9,16 @@ use bevy::{
     sprite::{MaterialMesh2dBundle, Mesh2dHandle},
 };
 
+use rand::Rng;
+
 use crate::{Bird, GameState, InfoText, Pipe, ScoreText, SpawnPipeTimer};
 
 const SCORE_TEXT: &str = "Score: ";
 const MAX_SPEED: f32 = 5.0;
-const MIN_SPEED: f32 = -5.0;
 const SPEED_DEC: f32 = -0.2;
 const BIRD_SIZE: f32 = 25.0;
 const PIPE_WIDTH: f32 = 50.0;
+const DIFFICULTY: f32 = 100.0;
 const DEATH_TEXT: &str = "You died (noob). Press Enter to restart or Esc to quit.";
 
 pub fn update(
@@ -35,6 +37,9 @@ pub fn update(
 ) {
     match game_state.alive {
         true => {
+            let window_height = window.single().height();
+            let window_width = window.single().width();
+
             // Check for collision
             for (_, bird_transform) in bird_query.iter_mut() {
                 for (_, pipe_transform, _) in pipe_query.iter_mut() {
@@ -47,8 +52,6 @@ pub fn update(
 
             // Remove pipes
             for (_, transform, entity) in pipe_query.iter_mut() {
-                let window_width = window.single().width();
-
                 let left_threshold = -(window_width / 2.0 + PIPE_WIDTH / 2.0);
 
                 if transform.translation.x < left_threshold {
@@ -59,17 +62,16 @@ pub fn update(
             // Spawn pipes
             timer.t.tick(time.delta());
             if timer.t.finished() {
-                let gap = 100.0;
-                let window_height = window.single().height();
-                let window_width = window.single().width();
-
                 let pipe_x_offset = window_width / 2.0 + PIPE_WIDTH / 2.0;
 
-                let available_height = window_height - gap;
+                let mut rng = rand::thread_rng();
+                let max_offset = window_height / 2.0 - DIFFICULTY;
+                let gap_offset = rng.gen_range(-max_offset..max_offset) as f32;
 
-                let top_pipe_height = available_height / 2.0;
-                let bottom_pipe_height = available_height / 2.0;
+                let top_pipe_height = window_height / 2.0 + gap_offset + DIFFICULTY;
+                let bottom_pipe_height = window_height / 2.0 - gap_offset + DIFFICULTY;
 
+                // Top pipe
                 commands.spawn((
                     MaterialMesh2dBundle {
                         mesh: Mesh2dHandle(meshes.add(Rectangle::new(PIPE_WIDTH, top_pipe_height))),
@@ -80,7 +82,7 @@ pub fn update(
                     Pipe,
                 ));
 
-                // Spawn bottom pipe
+                // Bottom pipe
                 commands.spawn((
                     MaterialMesh2dBundle {
                         mesh: Mesh2dHandle(
@@ -94,22 +96,10 @@ pub fn update(
                 ));
             }
 
-            kb_events.read().for_each(|event| match event.key_code {
-                KeyCode::Space => game_state.speed_y = MAX_SPEED,
-                KeyCode::Escape => process::exit(0x0),
-                _ => (),
-            });
-
-            match game_state.speed_y {
-                _ if game_state.speed_y > MIN_SPEED => game_state.speed_y += SPEED_DEC,
-                _ => (),
-            }
-
             // Update bird location
             for (_, mut transform) in bird_query.iter_mut() {
-                let height = window.single().height();
-                let ground = -(height / 2.0);
-                let roof = height / 2.0;
+                let ground = -(window_height / 2.0);
+                let roof = window_height / 2.0;
                 let move_amount = game_state.speed_y * time.delta_seconds() * 100.0;
 
                 match transform.translation.y {
@@ -121,13 +111,24 @@ pub fn update(
 
             // Move pipes
             for (_, mut transform, _) in pipe_query.iter_mut() {
-                let width = window.single().resolution.width();
-
                 transform.translation.x -= time.delta_seconds() * 200.0;
 
-                if transform.translation.x + PIPE_WIDTH < -(width / 2.0) {
-                    transform.translation.x = width / 2.0;
+                if transform.translation.x + PIPE_WIDTH < -(window_width / 2.0) {
+                    transform.translation.x = window_width / 2.0;
                 }
+            }
+
+            kb_events.read().for_each(|event| match event.key_code {
+                KeyCode::Space => {
+                    game_state.speed_y = MAX_SPEED;
+                }
+                KeyCode::Escape => process::exit(0x0),
+                _ => (),
+            });
+
+            match game_state.speed_y {
+                _ if game_state.speed_y > -MAX_SPEED => game_state.speed_y += SPEED_DEC,
+                _ => (),
             }
         }
         false => match game_state.game_over {
