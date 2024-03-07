@@ -12,7 +12,7 @@ use bevy::{
 
 use rand::Rng;
 
-use crate::{Bird, GameState, InfoText, Pipe, PipePassed, ScoreText, SpawnPipeTimer};
+use crate::{Bird, GameState, InfoText, Pipe, PipePassed, ScoreText};
 
 const SCORE_TEXT: &str = "Score: ";
 const MAX_SPEED: f32 = 5.0;
@@ -27,7 +27,6 @@ const DEATH_TEXT: &str =
 pub fn update(
     mut commands: Commands,
     mut game_state: ResMut<GameState>,
-    mut timer: ResMut<SpawnPipeTimer>,
     mut score_query: Query<&mut Text, (With<ScoreText>, Without<InfoText>)>,
     mut text_query: Query<&mut Text, (With<InfoText>, Without<ScoreText>)>,
     mut bird_query: Query<&mut Transform, (With<Bird>, Without<Pipe>)>,
@@ -60,45 +59,56 @@ pub fn update(
             }
 
             // Iterate over the pipes
-            for (pipe, mut transform, entity, mut pipe_passed) in pipe_query.iter_mut() {
-                // Check collisions
-                let aabb2d = Aabb2d::new(
-                    transform.translation.truncate(),
-                    Vec2::new(PIPE_WIDTH / 2.0, pipe.0 / 2.0),
-                );
-                if aabb2d.intersects(&BoundingCircle::new(bird.translation.truncate(), BIRD_SIZE)) {
-                    commands.spawn(AudioBundle {
-                        source: asset_server.load("death.ogg"),
-                        ..default()
-                    });
-                    game_state.alive = false;
-                    game_state.game_over = true;
-                }
+            pipe_query
+                .iter_mut()
+                .for_each(|(pipe, mut transform, entity, mut pipe_passed)| {
+                    // Check collisions
+                    let pipe_bounding_box = Aabb2d::new(
+                        transform.translation.truncate(),
+                        Vec2::new(PIPE_WIDTH / 2.0, pipe.0 / 2.0),
+                    );
 
-                // Move pipes to the left
-                transform.translation.x -= time.delta_seconds() * 200.0;
+                    let circle_bounding_box =
+                        BoundingCircle::new(bird.translation.truncate(), BIRD_SIZE);
 
-                // Remove pipes from left of screen
-                let left_threshold = -(window_width / 2.0 + PIPE_WIDTH / 2.0);
-                if transform.translation.x < left_threshold {
-                    commands.entity(entity).remove::<Pipe>();
-                }
+                    if pipe_bounding_box.intersects(&circle_bounding_box) {
+                        commands.spawn(AudioBundle {
+                            source: asset_server.load("death.ogg"),
+                            ..Default::default()
+                        });
+                        game_state.alive = false;
+                        game_state.game_over = true;
+                    }
 
-                // Increment score after passing pipes
-                if !pipe_passed.0 && transform.translation.x < -PIPE_WIDTH {
-                    commands.spawn(AudioBundle {
-                        source: asset_server.load("score.ogg"),
-                        ..default()
-                    });
-                    pipe_passed.0 = true;
-                    game_state.score += 1;
-                    score_query.single_mut().sections[1].value = game_state.score.to_string();
-                }
-            }
+                    // Move pipes to the left
+                    transform.translation.x -= time.delta_seconds() * 200.0;
+
+                    match transform.translation.x {
+                        // Remove pipes from left of screen
+                        x if x < -(window_width / 2.0 + PIPE_WIDTH / 2.0) => {
+                            commands.entity(entity).remove::<Pipe>();
+                        }
+                        x if x < -PIPE_WIDTH => match pipe_passed.0 {
+                            false => {
+                                // Increment score after passing pipes
+                                commands.spawn(AudioBundle {
+                                    source: asset_server.load("score.ogg"),
+                                    ..default()
+                                });
+                                pipe_passed.0 = true;
+                                game_state.score += 1;
+                                score_query.single_mut().sections[1].value =
+                                    game_state.score.to_string();
+                            }
+                            true => (),
+                        },
+                        _ => (),
+                    };
+                });
 
             // Spawn pipes
-            timer.t.tick(time.delta());
-            if timer.t.finished() {
+            game_state.pipe_spawn_timer.tick(time.delta());
+            if game_state.pipe_spawn_timer.finished() {
                 let pipe_x_offset = window_width / 2.0 + PIPE_WIDTH / 2.0;
 
                 let mut rng = rand::thread_rng();

@@ -29,9 +29,7 @@ fn main() {
             alive: false,
             speed_y: 0.0,
             game_over: false,
-        })
-        .insert_resource(SpawnPipeTimer {
-            t: Timer::new(Duration::from_secs(2), TimerMode::Repeating),
+            pipe_spawn_timer: Timer::new(Duration::from_secs(2), TimerMode::Repeating),
         })
         .add_systems(Startup, setup)
         .add_systems(Update, update)

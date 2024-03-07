@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{InfoText, ScoreText};
 
-const FONT_SIZE: f32 = 24.0;
+const FONT_SIZE: f32 = 32.0;
 const START_TEXT: &str = "Press Space to start the game and jump. Press Esc to quit.";
 
 pub fn setup(mut commands: Commands) {
