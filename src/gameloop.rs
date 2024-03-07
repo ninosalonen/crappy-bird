@@ -28,8 +28,8 @@ pub fn update(
     mut timer: ResMut<SpawnPipeTimer>,
     mut score_query: Query<&mut Text, (With<ScoreText>, Without<InfoText>)>,
     mut text_query: Query<&mut Text, (With<InfoText>, Without<ScoreText>)>,
-    mut bird_query: Query<(&Bird, &mut Transform), (With<Bird>, Without<Pipe>)>,
-    mut pipe_query: Query<(&Pipe, &mut Transform, Entity), (With<Pipe>, Without<Bird>)>,
+    mut bird_query: Query<&mut Transform, (With<Bird>, Without<Pipe>)>,
+    mut pipe_query: Query<(&mut Transform, Entity), (With<Pipe>, Without<Bird>)>,
     mut kb_events: EventReader<KeyboardInput>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
@@ -40,7 +40,7 @@ pub fn update(
         true => {
             let window_height = window.single().height();
             let window_width = window.single().width();
-            let (_, mut bird) = bird_query.single_mut();
+            let mut bird = bird_query.single_mut();
 
             // Update bird location
             let ground = -(window_height / 2.0);
@@ -54,7 +54,7 @@ pub fn update(
             }
 
             // Iterate over the pipes
-            for (_, mut transform, entity) in pipe_query.iter_mut() {
+            for (mut transform, entity) in pipe_query.iter_mut() {
                 // Check for collision
                 if check_collision(
                     BoundingCircle::new(bird.translation.truncate(), BIRD_SIZE / 2.0),
