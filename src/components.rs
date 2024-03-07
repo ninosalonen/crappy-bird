@@ -11,3 +11,6 @@ pub struct Bird;
 
 #[derive(Component)]
 pub struct Pipe;
+
+#[derive(Component)]
+pub struct PipePassed(pub bool);

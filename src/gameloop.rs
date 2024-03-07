@@ -12,7 +12,7 @@ use bevy::{
 
 use rand::Rng;
 
-use crate::{Bird, GameState, InfoText, Pipe, ScoreText, SpawnPipeTimer};
+use crate::{Bird, GameState, InfoText, Pipe, PipePassed, ScoreText, SpawnPipeTimer};
 
 const SCORE_TEXT: &str = "Score: ";
 const MAX_SPEED: f32 = 5.0;
@@ -29,7 +29,7 @@ pub fn update(
     mut score_query: Query<&mut Text, (With<ScoreText>, Without<InfoText>)>,
     mut text_query: Query<&mut Text, (With<InfoText>, Without<ScoreText>)>,
     mut bird_query: Query<&mut Transform, (With<Bird>, Without<Pipe>)>,
-    mut pipe_query: Query<(&mut Transform, Entity), (With<Pipe>, Without<Bird>)>,
+    mut pipe_query: Query<(&mut Transform, Entity, &mut PipePassed), (With<Pipe>, Without<Bird>)>,
     mut kb_events: EventReader<KeyboardInput>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
@@ -54,7 +54,7 @@ pub fn update(
             }
 
             // Iterate over the pipes
-            for (mut transform, entity) in pipe_query.iter_mut() {
+            for (mut transform, entity, mut pipe_passed) in pipe_query.iter_mut() {
                 // Check for collision
                 if check_collision(
                     BoundingCircle::new(bird.translation.truncate(), BIRD_SIZE / 2.0),
@@ -74,6 +74,13 @@ pub fn update(
                 let left_threshold = -(window_width / 2.0 + PIPE_WIDTH / 2.0);
                 if transform.translation.x < left_threshold {
                     commands.entity(entity).remove::<Pipe>();
+                }
+
+                // Increment score after passing pipes
+                if !pipe_passed.0 && transform.translation.x < -BIRD_SIZE / 2.0 {
+                    pipe_passed.0 = true;
+                    game_state.score += 1;
+                    score_query.single_mut().sections[1].value = game_state.score.to_string();
                 }
             }
 
@@ -98,6 +105,7 @@ pub fn update(
                         ..Default::default()
                     },
                     Pipe,
+                    PipePassed(false),
                 ));
 
                 // Bottom pipe
@@ -111,6 +119,8 @@ pub fn update(
                         ..Default::default()
                     },
                     Pipe,
+                    // Calculate the score from top pipes
+                    PipePassed(true),
                 ));
             }
 
