@@ -22,7 +22,7 @@ const PIPE_WIDTH: f32 = 50.0;
 const GAP: f32 = 100.0;
 const HALF_GAP: f32 = GAP / 2.0;
 const DEATH_TEXT: &str =
-    "You died (noob). Press Enter to restart the game (literally) or Esc to quit.";
+    "You died (noob). Press Enter to restart the game (literally) or press Esc to quit.";
 
 pub fn update(
     mut commands: Commands,
@@ -40,6 +40,7 @@ pub fn update(
     mut materials: ResMut<Assets<ColorMaterial>>,
     time: Res<Time>,
     window: Query<&Window>,
+    asset_server: Res<AssetServer>,
 ) {
     match game_state.alive {
         true => {
@@ -66,12 +67,16 @@ pub fn update(
                     Vec2::new(PIPE_WIDTH / 2.0, pipe.0 / 2.0),
                 );
                 if aabb2d.intersects(&BoundingCircle::new(bird.translation.truncate(), BIRD_SIZE)) {
+                    commands.spawn(AudioBundle {
+                        source: asset_server.load("death.ogg"),
+                        ..default()
+                    });
                     game_state.alive = false;
                     game_state.game_over = true;
                 }
 
                 // Move pipes to the left
-                transform.translation.x -= time.delta_seconds() * 500.0;
+                transform.translation.x -= time.delta_seconds() * 200.0;
 
                 // Remove pipes from left of screen
                 let left_threshold = -(window_width / 2.0 + PIPE_WIDTH / 2.0);
@@ -80,7 +85,11 @@ pub fn update(
                 }
 
                 // Increment score after passing pipes
-                if !pipe_passed.0 && transform.translation.x < -BIRD_SIZE {
+                if !pipe_passed.0 && transform.translation.x < -PIPE_WIDTH {
+                    commands.spawn(AudioBundle {
+                        source: asset_server.load("score.ogg"),
+                        ..default()
+                    });
                     pipe_passed.0 = true;
                     game_state.score += 1;
                     score_query.single_mut().sections[1].value = game_state.score.to_string();
