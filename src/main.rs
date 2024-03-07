@@ -3,6 +3,8 @@ mod gameloop;
 mod resources;
 mod setup;
 
+use std::time::Duration;
+
 use bevy::prelude::*;
 
 pub use components::*;
@@ -26,6 +28,10 @@ fn main() {
             score: 0,
             alive: false,
             speed_y: 0.0,
+            game_over: false,
+        })
+        .insert_resource(SpawnPipeTimer {
+            t: Timer::new(Duration::from_secs(3), TimerMode::Repeating),
         })
         .add_systems(Startup, setup)
         .add_systems(Update, update)
