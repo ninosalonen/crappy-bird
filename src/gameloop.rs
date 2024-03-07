@@ -19,7 +19,8 @@ const MAX_SPEED: f32 = 5.0;
 const SPEED_DEC: f32 = -0.2;
 const BIRD_SIZE: f32 = 25.0;
 const PIPE_WIDTH: f32 = 50.0;
-const DIFFICULTY: f32 = 150.0;
+const GAP: f32 = 100.0;
+const HALF_GAP: f32 = GAP / 2.0;
 const DEATH_TEXT: &str = "You died (noob). Press Enter to restart or Esc to quit.";
 
 pub fn update(
@@ -29,7 +30,10 @@ pub fn update(
     mut score_query: Query<&mut Text, (With<ScoreText>, Without<InfoText>)>,
     mut text_query: Query<&mut Text, (With<InfoText>, Without<ScoreText>)>,
     mut bird_query: Query<&mut Transform, (With<Bird>, Without<Pipe>)>,
-    mut pipe_query: Query<(&mut Transform, Entity, &mut PipePassed), (With<Pipe>, Without<Bird>)>,
+    mut pipe_query: Query<
+        (&Pipe, &mut Transform, Entity, &mut PipePassed),
+        (With<Pipe>, Without<Bird>),
+    >,
     mut kb_events: EventReader<KeyboardInput>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
@@ -54,15 +58,13 @@ pub fn update(
             }
 
             // Iterate over the pipes
-            for (mut transform, entity, mut pipe_passed) in pipe_query.iter_mut() {
-                // Check for collision
-                if check_collision(
-                    BoundingCircle::new(bird.translation.truncate(), BIRD_SIZE / 2.0),
-                    Aabb2d::new(
-                        transform.translation.truncate(),
-                        transform.scale.truncate() / 2.0,
-                    ),
-                ) {
+            for (pipe, mut transform, entity, mut pipe_passed) in pipe_query.iter_mut() {
+                // Check collisions
+                let aabb2d = Aabb2d::new(
+                    transform.translation.truncate(),
+                    Vec2::new(PIPE_WIDTH / 2.0, pipe.0 / 2.0),
+                );
+                if aabb2d.intersects(&BoundingCircle::new(bird.translation.truncate(), BIRD_SIZE)) {
                     game_state.alive = false;
                     game_state.game_over = true;
                 }
@@ -90,21 +92,23 @@ pub fn update(
                 let pipe_x_offset = window_width / 2.0 + PIPE_WIDTH / 2.0;
 
                 let mut rng = rand::thread_rng();
-                let max_offset = window_height / 2.0 + DIFFICULTY;
+                let max_offset = window_height / 4.0 - GAP;
                 let gap_offset = rng.gen_range(-max_offset..max_offset) as f32;
 
-                let top_pipe_height = window_height / 2.0 + gap_offset + DIFFICULTY;
-                let bottom_pipe_height = window_height / 2.0 - gap_offset + DIFFICULTY;
+                let top_y = window_height / 4.0 + HALF_GAP + gap_offset;
+                let bottom_y = -(window_height / 4.0) - HALF_GAP + gap_offset;
+                let top_pipe_height = ((window_height / 2.0) - top_y) * 2.0;
+                let bottom_pipe_height = -((-(window_height / 2.0) - bottom_y) * 2.0);
 
                 // Top pipe
                 commands.spawn((
                     MaterialMesh2dBundle {
                         mesh: Mesh2dHandle(meshes.add(Rectangle::new(PIPE_WIDTH, top_pipe_height))),
                         material: materials.add(Color::DARK_GREEN),
-                        transform: Transform::from_xyz(pipe_x_offset, window_height / 2.0, 0.0),
+                        transform: Transform::from_xyz(pipe_x_offset, top_y, 0.0),
                         ..Default::default()
                     },
-                    Pipe,
+                    Pipe(top_pipe_height),
                     PipePassed(false),
                 ));
 
@@ -115,10 +119,10 @@ pub fn update(
                             meshes.add(Rectangle::new(PIPE_WIDTH, bottom_pipe_height)),
                         ),
                         material: materials.add(Color::DARK_GREEN),
-                        transform: Transform::from_xyz(pipe_x_offset, -(window_height / 2.0), 0.0),
+                        transform: Transform::from_xyz(pipe_x_offset, bottom_y, 0.0),
                         ..Default::default()
                     },
-                    Pipe,
+                    Pipe(bottom_pipe_height),
                     // Calculate the score from top pipes
                     PipePassed(true),
                 ));
@@ -173,8 +177,4 @@ pub fn update(
             }
         },
     }
-}
-
-fn check_collision(bird: BoundingCircle, pipe: Aabb2d) -> bool {
-    pipe.intersects(&bird)
 }

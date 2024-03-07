@@ -10,7 +10,7 @@ pub struct InfoText;
 pub struct Bird;
 
 #[derive(Component)]
-pub struct Pipe;
+pub struct Pipe(pub f32);
 
 #[derive(Component)]
 pub struct PipePassed(pub bool);
