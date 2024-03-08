@@ -1,6 +1,6 @@
 # Crappy bird
 
-A crappy verison of flappy bird with simple 2D graphics.
+A crappy verison of flappy bird with simple 2D graphics. This was a small course project where the idea was to get familiar with some different language or paradigm.
 
 ## Development
 

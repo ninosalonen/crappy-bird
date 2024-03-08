@@ -71,13 +71,16 @@ pub fn update(
                     let circle_bounding_box =
                         BoundingCircle::new(bird.translation.truncate(), BIRD_SIZE);
 
-                    if pipe_bounding_box.intersects(&circle_bounding_box) {
-                        commands.spawn(AudioBundle {
-                            source: asset_server.load("death.ogg"),
-                            ..Default::default()
-                        });
-                        game_state.alive = false;
-                        game_state.game_over = true;
+                    match pipe_bounding_box.intersects(&circle_bounding_box) {
+                        true => {
+                            commands.spawn(AudioBundle {
+                                source: asset_server.load("death.ogg"),
+                                ..Default::default()
+                            });
+                            game_state.alive = false;
+                            game_state.game_over = true;
+                        }
+                        false => (),
                     }
 
                     // Move pipes to the left
@@ -108,44 +111,48 @@ pub fn update(
 
             // Spawn pipes
             game_state.pipe_spawn_timer.tick(time.delta());
-            if game_state.pipe_spawn_timer.finished() {
-                let pipe_x_offset = window_width / 2.0 + PIPE_WIDTH / 2.0;
+            match game_state.pipe_spawn_timer.finished() {
+                true => {
+                    let pipe_x_offset = window_width / 2.0 + PIPE_WIDTH / 2.0;
 
-                let mut rng = rand::thread_rng();
-                let max_offset = window_height / 4.0 - GAP;
-                let gap_offset = rng.gen_range(-max_offset..max_offset) as f32;
+                    let max_offset = window_height / 4.0 - GAP;
+                    let gap_offset = rand::thread_rng().gen_range(-max_offset..max_offset) as f32;
 
-                let top_y = window_height / 4.0 + HALF_GAP + gap_offset;
-                let bottom_y = -(window_height / 4.0) - HALF_GAP + gap_offset;
-                let top_pipe_height = ((window_height / 2.0) - top_y) * 2.0;
-                let bottom_pipe_height = -((-(window_height / 2.0) - bottom_y) * 2.0);
+                    let top_y = window_height / 4.0 + HALF_GAP + gap_offset;
+                    let bottom_y = -(window_height / 4.0) - HALF_GAP + gap_offset;
+                    let top_pipe_height = ((window_height / 2.0) - top_y) * 2.0;
+                    let bottom_pipe_height = -((-(window_height / 2.0) - bottom_y) * 2.0);
 
-                // Top pipe
-                commands.spawn((
-                    MaterialMesh2dBundle {
-                        mesh: Mesh2dHandle(meshes.add(Rectangle::new(PIPE_WIDTH, top_pipe_height))),
-                        material: materials.add(Color::DARK_GREEN),
-                        transform: Transform::from_xyz(pipe_x_offset, top_y, 0.0),
-                        ..Default::default()
-                    },
-                    Pipe(top_pipe_height),
-                    PipePassed(false),
-                ));
+                    // Top pipe
+                    commands.spawn((
+                        MaterialMesh2dBundle {
+                            mesh: Mesh2dHandle(
+                                meshes.add(Rectangle::new(PIPE_WIDTH, top_pipe_height)),
+                            ),
+                            material: materials.add(Color::DARK_GREEN),
+                            transform: Transform::from_xyz(pipe_x_offset, top_y, 0.0),
+                            ..Default::default()
+                        },
+                        Pipe(top_pipe_height),
+                        PipePassed(false),
+                    ));
 
-                // Bottom pipe
-                commands.spawn((
-                    MaterialMesh2dBundle {
-                        mesh: Mesh2dHandle(
-                            meshes.add(Rectangle::new(PIPE_WIDTH, bottom_pipe_height)),
-                        ),
-                        material: materials.add(Color::DARK_GREEN),
-                        transform: Transform::from_xyz(pipe_x_offset, bottom_y, 0.0),
-                        ..Default::default()
-                    },
-                    Pipe(bottom_pipe_height),
-                    // Calculate the score from top pipes
-                    PipePassed(true),
-                ));
+                    // Bottom pipe
+                    commands.spawn((
+                        MaterialMesh2dBundle {
+                            mesh: Mesh2dHandle(
+                                meshes.add(Rectangle::new(PIPE_WIDTH, bottom_pipe_height)),
+                            ),
+                            material: materials.add(Color::DARK_GREEN),
+                            transform: Transform::from_xyz(pipe_x_offset, bottom_y, 0.0),
+                            ..Default::default()
+                        },
+                        Pipe(bottom_pipe_height),
+                        // Calculate the score from top pipes
+                        PipePassed(true),
+                    ));
+                }
+                false => (),
             }
 
             kb_events.read().for_each(|event| match event.key_code {
