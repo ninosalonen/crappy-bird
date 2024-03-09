@@ -1,6 +1,6 @@
 # Crappy bird
 
-A crappy verison of flappy bird with simple 2D graphics. This was a small course project where the idea was to get familiar with some different language or paradigm.
+A crappy verison of flappy bird with simple 2D graphics. This was a small course project where the idea was to get familiar with some different language or paradigm. I tried to experiment with pattern matching (If statements would have been ofc a better choice for many cases here), closures and iterators where ever possible.
 
 ## Development
 
