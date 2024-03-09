@@ -5,7 +5,7 @@ mod setup;
 
 use std::time::Duration;
 
-use bevy::prelude::*;
+use bevy::{prelude::*, window::WindowMode};
 
 pub use components::*;
 pub use gameloop::*;
@@ -19,6 +19,8 @@ fn main() {
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "Crappy bird".to_string(),
+                mode: WindowMode::Windowed,
+                resizable: false,
                 ..Default::default()
             }),
             ..Default::default()
