@@ -62,16 +62,13 @@ pub fn update(
             pipe_query
                 .iter_mut()
                 .for_each(|(pipe, mut transform, entity, mut pipe_passed)| {
-                    // Check collisions
-                    let pipe_bounding_box = Aabb2d::new(
+                    // Check for collisions
+                    match Aabb2d::new(
                         transform.translation.truncate(),
                         Vec2::new(PIPE_WIDTH / 2.0, pipe.0 / 2.0),
-                    );
-
-                    let circle_bounding_box =
-                        BoundingCircle::new(bird.translation.truncate(), BIRD_SIZE);
-
-                    match pipe_bounding_box.intersects(&circle_bounding_box) {
+                    )
+                    .intersects(&BoundingCircle::new(bird.translation.truncate(), BIRD_SIZE))
+                    {
                         true => {
                             commands.spawn(AudioBundle {
                                 source: asset_server.load("death.ogg"),
